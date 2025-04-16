@@ -1,40 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { getDevice, getUsbCrc } from './utils';
 
 const battery = ref(0)
 
-function getUsbCrc(value: Uint8Array<ArrayBuffer>) {
-  let crc = 0;
-  for (let i = 0; i < value.length - 1; i++) {
-    crc += value[i];
-  }
-  crc = crc & 0xff;
-  crc = 0x55 - crc;
-
-  return crc;
-}
-
 const handleClick = async () => {
-  const devices = await navigator.hid.requestDevice({
-    filters: [],
-  });
-
-  const device =
-    devices.length > 0
-      ? devices.find((device) => {
-          return device.collections.find((c) => {
-            return (
-              c.inputReports!.length === 1 &&
-              c.outputReports!.length === 1 &&
-              c.outputReports![0].reportId === 0x08
-            );
-          });
-        })
-      : devices[0];
-
+  const device = await getDevice()
   if (!device) return;
 
-  await device.open();
+  if (!device.opened) {
+    await device.open();
+  }
 
   device.oninputreport = (event) => {
     const data = new Uint8Array(event.data.buffer);
